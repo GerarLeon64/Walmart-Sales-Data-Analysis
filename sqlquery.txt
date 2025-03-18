@@ -1,0 +1,53 @@
+
+-- This query is run within bigquery --
+
+-- General Query of the sales data
+SELECT *
+FROM winter-form-443816-j0.walmart_sales.sales;
+
+-- Is there a correlation between temperature and unemployment rate?
+SELECT CORR(Temperature, Unemployment) AS Correlation
+FROM winter-form-443816-j0.walmart_sales.sales;
+-- Correlation coefficient very close to 0, virtually no correlation bewteen temperature and unemployment rate
+
+-- Is there a correlation between fuel price and sales, grouped by region (store number)?
+SELECT Store, CORR(Weekly_Sales, Fuel_Price) AS Correlation
+FROM winter-form-443816-j0.walmart_sales.sales
+GROUP BY Store
+ORDER BY Store ASC;
+-- Stores 44 and 38 have a somewhat strong positive correlation, 36 has a somewhat strong negative correlation, the rest have weak correlations
+
+-- Is there a correlation between fuel price and sales, without grouping?
+SELECT CORR(Weekly_Sales, Fuel_Price) AS Correlation
+FROM winter-form-443816-j0.walmart_sales.sales;
+-- Very weak correlation between fuel price and sales, all stores put together
+
+-- What percentage of stores have average weekly sales that are at above the average weekly sales across all stores?
+SELECT *
+FROM (
+SELECT DISTINCT(Store), AVG(Weekly_Sales) AS Average_Weekly_Sales_By_Store, (SELECT AVG(Weekly_Sales) FROM winter-form-443816-j0.walmart_sales.sales) AS Average_Weekly_Sales_Total
+FROM winter-form-443816-j0.walmart_sales.sales
+GROUP BY Store
+ORDER BY Store)
+WHERE Average_Weekly_Sales_By_Store >= Average_Weekly_Sales_Total;
+-- 19 stores out of 45 (42.22%) have an average weekly sales that is at or above the average weekly sales across all stores (our query has 19 rows)
+
+-- How do the presence of holidays affect weekly sales?
+-- Two temporary tables with average weekly sales for each store, with and without holiday flag
+WITH no_holidays AS (SELECT DISTINCT(Store), AVG(Weekly_Sales) AS Weekly_Sales_No_Holidays
+FROM winter-form-443816-j0.walmart_sales.sales
+WHERE Holiday_Flag = 0
+GROUP BY Store
+ORDER BY Store
+), with_holidays AS (
+  SELECT DISTINCT(Store), AVG(Weekly_Sales) AS Weekly_Sales_Holidays
+FROM winter-form-443816-j0.walmart_sales.sales
+WHERE Holiday_Flag = 1
+GROUP BY Store
+ORDER BY Store
+)
+-- Comparsion of average weekly sales among stores 
+SELECT *
+FROM no_holidays
+JOIN with_holidays ON no_holidays.Store = with_holidays.Store
+ORDER BY with_holidays.Store
